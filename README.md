@@ -22,8 +22,8 @@
 
 + 执行composer update更新
 
-> 注：`^8.0` 对应自发行版本 `v8.0.0`，需先打 tag 并在 Packagist 收录后方可安装；
-> 当前仓库仅保留上游继承的 `v2.2`~`v3.0` tag，尚未发布 `8.x` 版本。
+> 注：`^8.0` 对应自发行版本 `v8.0.0`（已打 tag）。需在 [Packagist](https://packagist.org/)
+> 提交本仓库并收录后，才可通过 composer 安装。
 
 ## 3、惰性加载Redis配置：**/config/di.php** 
 
