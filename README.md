@@ -27,15 +27,22 @@
 
 ## 3、惰性加载Redis配置：**/config/di.php** 
 
-```
+```php
+use PhalApi\Phalapiredis\Lite;
+
 // 惰性加载Redis
 $di->redis = function () {
-    return new \PhalApi\Phalapiredis\Lite(\PhalApi\DI()->config->get("app.redis.servers"));
+    return new Lite(\PhalApi\DI()->config->get("app.redis.servers"));
 };
 ```
 
-> 注：命名空间已与包名 `phalapi/phalapiredis` 对齐。从上游 `xuepengdong/phalapiredis` 升级时，
-> 需将 `\Xuepengdong\Phalapiredis\Lite` 改为 `\PhalApi\Phalapiredis\Lite`。
+> **从上游升级只需改这一行 `use`**：
+> `use Xuepengdong\Phalapiredis\Lite;` → `use PhalApi\Phalapiredis\Lite;`
+>
+> 除此之外**使用方式完全不变**：类名 `Lite`、构造函数参数、全部公开方法名与参数顺序、
+> DI 服务名 `redis`、`config/app.php` 配置结构，以及本文所有 `\PhalApi\DI()->redis->xxx()`
+> 调用均与上游一致。若使用完全限定名，则把 `\Xuepengdong\Phalapiredis\Lite`
+> 改为 `\PhalApi\Phalapiredis\Lite`。
 
 ## 4、配置redis账号密码：/config/app.php
 ```
