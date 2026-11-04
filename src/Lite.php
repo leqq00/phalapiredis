@@ -14,6 +14,9 @@ class Lite extends RedisCache {
 
     private $db_old;
 
+    /** @var array 缓存 __call 转发时的参数元信息，避免重复反射 */
+    private $callMeta = array();
+
     /**
      * 重载方法，统一切换DB
      *
@@ -25,12 +28,37 @@ class Lite extends RedisCache {
      */
     public function __call($name, $arguments)
     {
-        $last = count($arguments)-1;
-        $dbname = $arguments[$last];
-        $this->switchDB($dbname);
-        unset($arguments[$last]);
-        $arguments = empty($arguments)? array():$arguments;
-        return call_user_func_array(array($this,$name),$arguments);
+        if (!method_exists($this, $name)) {
+            throw new \BadMethodCallException('Call to undefined method ' . __CLASS__ . '::' . $name . '()');
+        }
+
+        // 缓存目标方法的参数元信息，避免每次调用都反射
+        if (!isset($this->callMeta[$name])) {
+            $ref = new \ReflectionMethod($this, $name);
+            $this->callMeta[$name] = array(
+                'params'   => $ref->getNumberOfParameters(),
+                'variadic' => $ref->isVariadic(),
+            );
+        }
+        $meta = $this->callMeta[$name];
+
+        // 判断最后一个参数是否为「显式传入的库名」：
+        //  - 固定参数方法：比方法声明的参数多 1 个，多出的即为库名
+        //  - 可变参数方法：最后参数是整数或 DB 配置里的名称才视为库名
+        if ($meta['variadic']) {
+            $hasDbArg = $this->looksLikeDbName(end($arguments));
+        } else {
+            $hasDbArg = count($arguments) > $meta['params'];
+        }
+
+        if ($hasDbArg) {
+            $dbname = array_pop($arguments);
+            $this->switchDB($dbname);
+        } else {
+            $this->switchDB();   // 未显式传库名：读 app.redis.DB['default']
+        }
+
+        return call_user_func_array(array($this, $name), $arguments);
     }
 
     /**
@@ -657,9 +685,9 @@ class Lite extends RedisCache {
      * @param $talbename
      * @return bool|int  0:失败, 1:成功
      */
-    public function ZADD($key, $SCORE, $VALUE, $talbename){
+    public function ZADD($key, $SCORE, $VALUE, $talbename = null){
         //ZADD KEY_NAME SCORE1 VALUE1.. SCOREN VALUEN
-        $this->redis->select($talbename);
+        $this->selectDb($talbename);
         return $this->redis->ZADD($key, $SCORE, $VALUE);
     }
 
@@ -671,8 +699,8 @@ class Lite extends RedisCache {
      * @param $talbename
      * @return int
      */
-    public function ZCARD($key,$talbename){
-        $this->redis->select($talbename);
+    public function ZCARD($key,$talbename = null){
+        $this->selectDb($talbename);
         return $this->redis->ZCARD($key);
     }
 
@@ -686,8 +714,8 @@ class Lite extends RedisCache {
      * @param $talbename
      * @return int
      */
-    public function ZCOUNT($key, $min, $max, $talbename){
-        $this->redis->select($talbename);
+    public function ZCOUNT($key, $min, $max, $talbename = null){
+        $this->selectDb($talbename);
         return $this->redis->ZCOUNT($key, $min, $max);
     }
 
@@ -701,8 +729,8 @@ class Lite extends RedisCache {
      * @param $talbename
      * @return int
      */
-    public function ZINCRBY($key, $increment, $member, $talbename){
-        $this->redis->select($talbename);
+    public function ZINCRBY($key, $increment, $member, $talbename = null){
+        $this->selectDb($talbename);
         return $this->redis->ZINCRBY($key, $increment, $member);
     }
     /**
@@ -715,9 +743,16 @@ class Lite extends RedisCache {
      * @param $talbename
      * @return int
      */
-    public function ZREM($talbename, $key, $member1, ...$otherMembers){
-        $this->redis->select($talbename);
-        return $this->redis->zRem($key, $member1, ...$otherMembers);
+    public function ZREM($talbename, $key = null, $member1 = null, ...$otherMembers){
+        $args = func_get_args();
+        // 旧写法 ZREM(库名, key, 成员...) / 新写法 ZREM(key, 成员...)
+        if($this->looksLikeDbName($args[0])){
+            $db = array_shift($args);
+        }else{
+            $db = null;   // 未显式传库名 -> 使用配置默认库
+        }
+        $this->selectDb($db);
+        return $this->redis->zRem(...$args);
     }
 
     /**
@@ -732,7 +767,7 @@ class Lite extends RedisCache {
      * @return int 目标集合中的成员数量
      */
     public function ZINTERSTORE($destination, $keys, $weights = [], $aggregate = 'SUM', $talbename = 0){
-        $this->redis->select($talbename);
+        $this->selectDb(func_num_args() > 4 ? $talbename : null);
         return $this->redis->zInterStore($destination, $keys, $weights, $aggregate);
     }
 
@@ -746,8 +781,8 @@ class Lite extends RedisCache {
      * @param $talbename 数据库名或索引
      * @return int 成员数量
      */
-    public function ZLEXCOUNT($key, $min, $max, $talbename){
-        $this->redis->select($talbename);
+    public function ZLEXCOUNT($key, $min, $max, $talbename = null){
+        $this->selectDb($talbename);
         return $this->redis->zLexCount($key, $min, $max);
     }
 
@@ -763,7 +798,7 @@ class Lite extends RedisCache {
      * @return array 成员数组或成员-分数关联数组
      */
     public function ZRANGE($key, $start, $end, $withscores = false, $talbename = 0){
-        $this->redis->select($talbename);
+        $this->selectDb(func_num_args() > 4 ? $talbename : null);
         return $this->redis->zRange($key, $start, $end, $withscores);
     }
 
@@ -780,7 +815,7 @@ class Lite extends RedisCache {
      * @return array 成员数组
      */
     public function ZRANGEBYLEX($key, $min, $max, $offset = null, $limit = null, $talbename = 0){
-        $this->redis->select($talbename);
+        $this->selectDb(func_num_args() > 5 ? $talbename : null);
         return $this->redis->zRangeByLex($key, $min, $max, $offset, $limit);
     }
 
@@ -796,7 +831,7 @@ class Lite extends RedisCache {
      * @return array 成员数组或成员-分数关联数组
      */
     public function ZRANGEBYSCORE($key, $min, $max, $options = [], $talbename = 0){
-        $this->redis->select($talbename);
+        $this->selectDb(func_num_args() > 4 ? $talbename : null);
         return $this->redis->zRangeByScore($key, $min, $max, $options);
     }
 
@@ -809,8 +844,8 @@ class Lite extends RedisCache {
      * @param $talbename 数据库名或索引
      * @return int|null 排名（从0开始），不存在返回NULL
      */
-    public function ZRANK($key, $member, $talbename){
-        $this->redis->select($talbename);
+    public function ZRANK($key, $member, $talbename = null){
+        $this->selectDb($talbename);
         return $this->redis->zRank($key, $member);
     }
 
@@ -824,8 +859,8 @@ class Lite extends RedisCache {
      * @param $talbename 数据库名或索引
      * @return int 移除的成员数量
      */
-    public function ZREMRANGEBYSCORE($key, $min, $max, $talbename){
-        $this->redis->select($talbename);
+    public function ZREMRANGEBYSCORE($key, $min, $max, $talbename = null){
+        $this->selectDb($talbename);
         return $this->redis->zRemRangeByScore($key, $min, $max);
     }
 
@@ -841,7 +876,7 @@ class Lite extends RedisCache {
      * @return array 成员数组或成员-分数关联数组
      */
     public function ZREVRANGE($key, $start, $end, $withscores = false, $talbename = 0){
-        $this->redis->select($talbename);
+        $this->selectDb(func_num_args() > 4 ? $talbename : null);
         return $this->redis->zRevRange($key, $start, $end, $withscores);
     }
 
@@ -857,7 +892,7 @@ class Lite extends RedisCache {
      * @return array 成员数组或成员-分数关联数组
      */
     public function ZREVRANGEBYSCORE($key, $max, $min, $options = [], $talbename = 0){
-        $this->redis->select($talbename);
+        $this->selectDb(func_num_args() > 4 ? $talbename : null);
         return $this->redis->zRevRangeByScore($key, $max, $min, $options);
     }
 
@@ -870,8 +905,8 @@ class Lite extends RedisCache {
      * @param $talbename 数据库名或索引
      * @return int|null 排名（从0开始），不存在返回NULL
      */
-    public function ZREVRANK($key, $member, $talbename){
-        $this->redis->select($talbename);
+    public function ZREVRANK($key, $member, $talbename = null){
+        $this->selectDb($talbename);
         return $this->redis->zRevRank($key, $member);
     }
 
@@ -884,8 +919,8 @@ class Lite extends RedisCache {
      * @param $talbename 数据库名或索引
      * @return float|null 分数值，不存在返回NULL
      */
-    public function ZSCORE($key, $member, $talbename){
-        $this->redis->select($talbename);
+    public function ZSCORE($key, $member, $talbename = null){
+        $this->selectDb($talbename);
         return $this->redis->zScore($key, $member);
     }
 
@@ -901,7 +936,7 @@ class Lite extends RedisCache {
      * @return int 目标集合中的成员数量
      */
     public function ZUNIONSTORE($destination, $keys, $weights = [], $aggregate = 'SUM', $talbename = 0){
-        $this->redis->select($talbename);
+        $this->selectDb(func_num_args() > 4 ? $talbename : null);
         return $this->redis->zUnionStore($destination, $keys, $weights, $aggregate);
     }
 
@@ -917,7 +952,7 @@ class Lite extends RedisCache {
      * @return array [元素数组, 下一个迭代器]
      */
     public function ZSCAN($key, &$iterator, $pattern = null, $count = null, $talbename = 0){
-        $this->redis->select($talbename);
+        $this->selectDb(func_num_args() > 4 ? $talbename : null);
         return $this->redis->zScan($key, $iterator, $pattern, $count);
     }
 
@@ -931,8 +966,8 @@ class Lite extends RedisCache {
      * @param $talbename
      * @return bool|int
      */
-    public function HDEL($key, $field, $talbename){
-        $this->redis->select($talbename);
+    public function HDEL($key, $field, $talbename = null){
+        $this->selectDb($talbename);
         $i = 0;
         if(is_array($field)){
             foreach($field as $hashkey){
@@ -955,8 +990,8 @@ class Lite extends RedisCache {
      * @param $talbename
      * @return array
      */
-    public function HGETALL($key, $talbename){
-        $this->redis->select($talbename);
+    public function HGETALL($key, $talbename = null){
+        $this->selectDb($talbename);
         $array =  $this->redis->HGETALL($this->formatKey($key));
         if(is_array($array) && !empty($array)){
             foreach($array as $key=> $value){
@@ -976,8 +1011,8 @@ class Lite extends RedisCache {
      * @param $talbename
      * @return bool|int
      */
-    public function HSET ($key, $field, $value, $talbename){
-        $this->redis->select($talbename);
+    public function HSET ($key, $field, $value, $talbename = null){
+        $this->selectDb($talbename);
         return $this->redis->HSET ($this->formatKey($key), $field, json_encode($value));
     }
 
@@ -990,8 +1025,8 @@ class Lite extends RedisCache {
      * @param $talbename
      * @return bool
      */
-    public function HEXISTS ($key, $field, $talbename){
-        $this->redis->select($talbename);
+    public function HEXISTS ($key, $field, $talbename = null){
+        $this->selectDb($talbename);
         return $this->redis->HEXISTS ($this->formatKey($key), $field);
     }
 
@@ -1004,8 +1039,8 @@ class Lite extends RedisCache {
      * @param $talbename
      * @return array
      */
-    public function HMGET ($key, $field, $talbename){
-        $this->redis->select($talbename);
+    public function HMGET ($key, $field, $talbename = null){
+        $this->selectDb($talbename);
         if(is_array($field)){
             $return_field = $this->redis->HMGET ($this->formatKey($key), $field);
         }else{
@@ -1027,8 +1062,8 @@ class Lite extends RedisCache {
      * @param $talbename
      * @return mixed
      */
-    public function HGET($key, $field, $talbename){
-        $this->redis->select($talbename);
+    public function HGET($key, $field, $talbename = null){
+        $this->selectDb($talbename);
         return json_decode($this->redis->HGET($this->formatKey($key), $field));
     }
     //----------------------------------------------------通用方法---------------------------------------------------
@@ -1174,17 +1209,58 @@ class Lite extends RedisCache {
     /**
      * 内部切换Redis-DB 如果已经在某个DB上则不再切换
      */
-    protected function switchDB($name){
+    protected function switchDB($name = null){
+        $db = $this->resolveDb($name);
+        // 注意：db_old 初值为 null，弱比较 null != 0 为 false，会导致默认库 0 时首次不切换
+        if($this->db_old === null || $this->db_old !== $db){
+            $this->redis->select($db);
+            $this->db_old = $db;
+        }
+    }
+
+    /**
+     * 解析 Redis 库索引：
+     *  - 未传（null） -> 读配置 app.redis.DB['default']，未配置则回退 0
+     *  - 整数        -> 直接作为库索引
+     *  - 字符串      -> 查 app.redis.DB 名称映射，未命中回退 0
+     */
+    protected function resolveDb($name = null){
         $arr = \PhalApi\DI()->config->get('app.redis.DB');
-        if(is_int($name)){
+        if(!is_array($arr)){
+            $arr = array();
+        }
+        if($name === null){
+            $db = isset($arr['default']) ? $arr['default'] : 0;
+        }elseif(is_int($name)){
             $db = $name;
         }else{
             $db = isset($arr[$name]) ? $arr[$name] : 0;
         }
-        if($this->db_old != $db){
-            $this->redis->select($db);
-            $this->db_old = $db;
+        return (int) $db;
+    }
+
+    /**
+     * 判断一个值是否「看起来像显式指定的库名」。
+     * 用于可变参数方法与 ZREM（库名在首位）兼容新旧两种调用形式。
+     */
+    protected function looksLikeDbName($value){
+        if(is_int($value)){
+            return true;
         }
+        if(!is_string($value)){
+            return false;
+        }
+        $arr = \PhalApi\DI()->config->get('app.redis.DB');
+        return is_array($arr) && array_key_exists($value, $arr);
+    }
+
+    /**
+     * public 方法统一入口：解析并执行 select
+     */
+    protected function selectDb($talbename = null){
+        $db = $this->resolveDb($talbename);
+        $this->redis->select($db);
+        return $db;
     }
 
     //-------------------------------------------------------谨慎使用------------------------------------------------

@@ -58,7 +58,9 @@ $di->redis = function () {
             'auth'   => 'phalapi',          //Redis链接密码
         ),
         // Redis分库对应关系操作时直接使用名称无需使用数字来切换Redis库
+        // 'default' 为未显式传库名时使用的默认库
         'DB'       => array(
+            'default'    => 0,
             'developers' => 1,
             'user'       => 2,
             'code'       => 3,
@@ -69,7 +71,33 @@ $di->redis = function () {
 
 ```
 
-## 5、入门使用
+## 5、Redis 库（DB）选择：可选参数
+
+末尾的 Redis 库名参数现在是**可选**的：
+
+- **不传** → 读取配置 `app.redis.DB['default']`；未配置该键时回退到 DB 0。
+- **显式传入** → 整数库索引，或 `app.redis.DB` 中定义的名称，覆盖默认值。
+
+```php
+// 旧写法完全兼容
+\PhalApi\DI()->redis->get_forever($key, 1);        // 显式切到 DB 1
+\PhalApi\DI()->redis->get_forever($key, 'user');   // 名称映射到 DB 2
+
+// 新写法：省略库名，使用 app.redis.DB['default']
+\PhalApi\DI()->redis->get_forever($key);
+\PhalApi\DI()->redis->ZRANGE('myzset', 0, -1, true);
+\PhalApi\DI()->redis->ZADD('myzset', 3, 'mysql');
+```
+
+> 说明：
+> - 早期 string / list / set 方法与 `Z*` / `H*` 方法均已统一支持，类名、方法名与其他参数**没有任何变化**。
+> - 可变成员的方法（如 `set_sAdd`、`get_sInter`）中，若最后一个参数是整数或 `DB` 配置里的名称，
+>   仍按显式库名处理；否则全部视为业务参数。
+> - `ZREM` 的库名原本在**第一个**参数，现在也可省略：`ZREM('myzset','one','two')`；
+>   旧写法 `ZREM(0,'myzset','one','two')` 同样兼容。
+> - 若某个业务参数本身恰好是整数或 `DB` 配置键名，请显式多传一个库名参数以免被误判。
+
+## 6、入门使用
 备注：以下所有库名都可以使用阿拉伯数字
 
 + **getRedis** 调用PHP 原生redis，获取Redis实例，当封装的方法未能满足时，可调用此接口获取Reids实例进行操作
@@ -626,7 +654,7 @@ $di->redis = function () {
     \PhalApi\DI()->redis->bgrewriteaof();
     ```
 
-## 6、许可证
+## 7、许可证
 
 本包以 **GPL-3.0-or-later** 授权发布，详见 [LICENSE](LICENSE)。
 
