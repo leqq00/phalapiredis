@@ -6,8 +6,8 @@
 
 + 官网地址：[http://www.phalapi.net/](http://www.phalapi.net/ "PhalApi官网")
 
-+ GitHub HomePage：[https://github.com/xuepengdong/phalapiredis](https://github.com/xuepengdong/phalapiredis)
-+ github Issues： [https://github.com/xuepengdong/phalapiredis/issues](https://github.com/xuepengdong/phalapiredis/issues)
++ GitHub HomePage：[https://github.com/leqq00/phalapiredis](https://github.com/leqq00/phalapiredis)
++ github Issues： [https://github.com/leqq00/phalapiredis/issues](https://github.com/leqq00/phalapiredis/issues)
 + PHP Redis：https://github.com/ukko/phpredis-phpdoc
 
 ## 2、安装：项目根目录composer.json添加
@@ -15,7 +15,7 @@
 ```
 {
     "require": {
-        "xuepengdong/phalapiredis": "dev-master"
+        "phalapi/phalapiredis": "^8.0"
     }
 }
 ```

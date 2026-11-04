@@ -731,7 +731,7 @@ class Lite extends RedisCache {
      * @param $talbename 数据库名或索引
      * @return int 目标集合中的成员数量
      */
-    public function ZINTERSTORE($destination, $keys, $weights = [], $aggregate = 'SUM', $talbename){
+    public function ZINTERSTORE($destination, $keys, $weights = [], $aggregate = 'SUM', $talbename = 0){
         $this->redis->select($talbename);
         return $this->redis->zInterStore($destination, $keys, $weights, $aggregate);
     }
@@ -762,7 +762,7 @@ class Lite extends RedisCache {
      * @param $talbename 数据库名或索引
      * @return array 成员数组或成员-分数关联数组
      */
-    public function ZRANGE($key, $start, $end, $withscores = false, $talbename){
+    public function ZRANGE($key, $start, $end, $withscores = false, $talbename = 0){
         $this->redis->select($talbename);
         return $this->redis->zRange($key, $start, $end, $withscores);
     }
@@ -779,7 +779,7 @@ class Lite extends RedisCache {
      * @param $talbename 数据库名或索引
      * @return array 成员数组
      */
-    public function ZRANGEBYLEX($key, $min, $max, $offset = null, $limit = null, $talbename){
+    public function ZRANGEBYLEX($key, $min, $max, $offset = null, $limit = null, $talbename = 0){
         $this->redis->select($talbename);
         return $this->redis->zRangeByLex($key, $min, $max, $offset, $limit);
     }
@@ -795,7 +795,7 @@ class Lite extends RedisCache {
      * @param $talbename 数据库名或索引
      * @return array 成员数组或成员-分数关联数组
      */
-    public function ZRANGEBYSCORE($key, $min, $max, $options = [], $talbename){
+    public function ZRANGEBYSCORE($key, $min, $max, $options = [], $talbename = 0){
         $this->redis->select($talbename);
         return $this->redis->zRangeByScore($key, $min, $max, $options);
     }
@@ -840,7 +840,7 @@ class Lite extends RedisCache {
      * @param $talbename 数据库名或索引
      * @return array 成员数组或成员-分数关联数组
      */
-    public function ZREVRANGE($key, $start, $end, $withscores = false, $talbename){
+    public function ZREVRANGE($key, $start, $end, $withscores = false, $talbename = 0){
         $this->redis->select($talbename);
         return $this->redis->zRevRange($key, $start, $end, $withscores);
     }
@@ -856,7 +856,7 @@ class Lite extends RedisCache {
      * @param $talbename 数据库名或索引
      * @return array 成员数组或成员-分数关联数组
      */
-    public function ZREVRANGEBYSCORE($key, $max, $min, $options = [], $talbename){
+    public function ZREVRANGEBYSCORE($key, $max, $min, $options = [], $talbename = 0){
         $this->redis->select($talbename);
         return $this->redis->zRevRangeByScore($key, $max, $min, $options);
     }
@@ -900,7 +900,7 @@ class Lite extends RedisCache {
      * @param $talbename 数据库名或索引
      * @return int 目标集合中的成员数量
      */
-    public function ZUNIONSTORE($destination, $keys, $weights = [], $aggregate = 'SUM', $talbename){
+    public function ZUNIONSTORE($destination, $keys, $weights = [], $aggregate = 'SUM', $talbename = 0){
         $this->redis->select($talbename);
         return $this->redis->zUnionStore($destination, $keys, $weights, $aggregate);
     }
@@ -916,7 +916,7 @@ class Lite extends RedisCache {
      * @param $talbename 数据库名或索引
      * @return array [元素数组, 下一个迭代器]
      */
-    public function ZSCAN($key, &$iterator, $pattern = null, $count = null, $talbename){
+    public function ZSCAN($key, &$iterator, $pattern = null, $count = null, $talbename = 0){
         $this->redis->select($talbename);
         return $this->redis->zScan($key, $iterator, $pattern, $count);
     }

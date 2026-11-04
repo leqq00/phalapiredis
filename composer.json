@@ -1,22 +1,28 @@
 {
-    "name": "xuepengdong/phalapiredis",
-    "description": "兼容phalapi/redis 所有方法； Redis 增强版",
+    "name": "phalapi/phalapiredis",
+    "description": "兼容 phalapi/redis 所有方法；Redis 增强版，支持 PHP 8。",
     "keywords": [
         "phalapi",
         "redis",
         "phalapi-redis"
     ],
     "license": "GPL-3.0-or-later",
-    "homepage": "https://blog.csdn.net/xiaoyangxiaodong",
+    "homepage": "https://github.com/leqq00/phalapiredis",
     "type": "library",
     "authors": [
         {
             "name": "dongxuepeng",
-            "email": "260288701@qq.com"
+            "email": "260288701@qq.com",
+            "role": "Original Author"
+        },
+        {
+            "name": "leqq00",
+            "email": "1031056910@qq.com",
+            "role": "Maintainer"
         }
     ],
     "require": {
-        "php": ">=5.3.3"
+        "php": ">=8.0"
     },
     "autoload": {
         "psr-4": {
