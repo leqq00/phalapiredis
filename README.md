@@ -2,9 +2,9 @@
 
 ## 1、前言
 
-基于PhalApi2-Redis 官方做了一些优化和新增，有问题欢迎指正；欢迎pull request，**兼容PHP Redis所有方法**
+基于 PhalApi2-Redis（上游 `xuepengdong/phalapiredis`）做了一些优化和新增；本仓库由 `leqq00` 独立维护与发行，**不属于 PhalApi 官方项目**，**兼容 PHP Redis 所有方法**。有问题欢迎指正，欢迎 pull request。
 
-+ 官网地址：[http://www.phalapi.net/](http://www.phalapi.net/ "PhalApi官网")
++ PhalApi 框架官网：[http://www.phalapi.net/](http://www.phalapi.net/ "PhalApi官网")
 
 + GitHub HomePage：[https://github.com/leqq00/phalapiredis](https://github.com/leqq00/phalapiredis)
 + github Issues： [https://github.com/leqq00/phalapiredis/issues](https://github.com/leqq00/phalapiredis/issues)
@@ -22,14 +22,20 @@
 
 + 执行composer update更新
 
+> 注：`^8.0` 对应自发行版本 `v8.0.0`，需先打 tag 并在 Packagist 收录后方可安装；
+> 当前仓库仅保留上游继承的 `v2.2`~`v3.0` tag，尚未发布 `8.x` 版本。
+
 ## 3、惰性加载Redis配置：**/config/di.php** 
 
 ```
 // 惰性加载Redis
 $di->redis = function () {
-    return new \Xuepengdong\Phalapiredis\Lite(\PhalApi\DI()->config->get("app.redis.servers"));
+    return new \PhalApi\Phalapiredis\Lite(\PhalApi\DI()->config->get("app.redis.servers"));
 };
 ```
+
+> 注：命名空间已与包名 `phalapi/phalapiredis` 对齐。从上游 `xuepengdong/phalapiredis` 升级时，
+> 需将 `\Xuepengdong\Phalapiredis\Lite` 改为 `\PhalApi\Phalapiredis\Lite`。
 
 ## 4、配置redis账号密码：/config/app.php
 ```
@@ -249,9 +255,9 @@ $di->redis = function () {
   + **set_lInsert**：在列表中指定元素的前面或后面插入新元素
   
     ```
-    \PhalApi\DI()->redis->set_lInsert('mylist', Redis::AFTER, 'pivot', 'newvalue', 1);
+    \PhalApi\DI()->redis->set_lInsert('mylist', \Redis::AFTER, 'pivot', 'newvalue', 1);
     ```
-    备注：使用 Redis::BEFORE 或 Redis::AFTER 作为位置参数
+    备注：使用 \Redis::BEFORE 或 \Redis::AFTER 作为位置参数
 
   + **set_rpoplpush**：将源列表的最后一个元素弹出并插入到目标列表头部
   
@@ -612,6 +618,10 @@ $di->redis = function () {
     ```
     \PhalApi\DI()->redis->bgrewriteaof();
     ```
+
+## 6、许可证
+
+本包以 **GPL-3.0-or-later** 授权发布，详见 [LICENSE](LICENSE)。
 
     
 

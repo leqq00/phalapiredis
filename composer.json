@@ -1,10 +1,11 @@
 {
     "name": "phalapi/phalapiredis",
-    "description": "兼容 phalapi/redis 所有方法；Redis 增强版，支持 PHP 8。",
+    "description": "兼容 phalapi/redis 所有方法；Redis 增强版，支持 PHP 8.0+。",
     "keywords": [
         "phalapi",
         "redis",
-        "phalapi-redis"
+        "phalapi-phalapiredis",
+        "cache"
     ],
     "license": "GPL-3.0-or-later",
     "homepage": "https://github.com/leqq00/phalapiredis",
@@ -26,7 +27,7 @@
     },
     "autoload": {
         "psr-4": {
-            "Xuepengdong\\Phalapiredis\\": "src/"
+            "PhalApi\\Phalapiredis\\": "src/"
         }
     }
 }
