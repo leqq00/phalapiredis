@@ -17,6 +17,19 @@ class Lite extends RedisCache {
     /** @var array 缓存 __call 转发时的参数元信息，避免重复反射 */
     private $callMeta = array();
 
+    /** @var int 连接配置 servers.db，作为未显式声明 DB['default'] 时的回退默认库 */
+    private $defaultDb = 0;
+
+    /**
+     * 缓存连接层的 db 配置。父类构造时会 select($config['db'])，
+     * 本包后续每次方法调用也会 select，默认库必须与之保持一致，
+     * 否则「不传库名」的调用会把连接切到与连接配置不一致的库。
+     */
+    public function __construct($config = array()){
+        parent::__construct($config);
+        $this->defaultDb = isset($config['db']) ? (int) $config['db'] : 0;
+    }
+
     /**
      * 重载方法，统一切换DB
      *
@@ -1230,11 +1243,13 @@ class Lite extends RedisCache {
             $arr = array();
         }
         if($name === null){
-            $db = isset($arr['default']) ? $arr['default'] : 0;
+            // 优先显式声明的 DB['default']；未配置则跟随连接层 servers.db
+            $db = isset($arr['default']) ? $arr['default'] : $this->defaultDb;
         }elseif(is_int($name)){
             $db = $name;
         }else{
-            $db = isset($arr[$name]) ? $arr[$name] : 0;
+            // 名称映射未命中时同样回退到连接层配置，而不是硬编码 0
+            $db = isset($arr[$name]) ? $arr[$name] : $this->defaultDb;
         }
         return (int) $db;
     }

@@ -58,7 +58,7 @@ $di->redis = function () {
             'auth'   => 'phalapi',          //Redis链接密码
         ),
         // Redis分库对应关系操作时直接使用名称无需使用数字来切换Redis库
-        // 'default' 为未显式传库名时使用的默认库
+        // 'default' 为默认库，未配置则跟随 servers.db（再缺省为 0）
         'DB'       => array(
             'default'    => 0,
             'developers' => 1,
@@ -75,7 +75,9 @@ $di->redis = function () {
 
 末尾的 Redis 库名参数现在是**可选**的：
 
-- **不传** → 读取配置 `app.redis.DB['default']`；未配置该键时回退到 DB 0。
+- **不传** → 优先读取 `app.redis.DB['default']`；未配置该键时，**跟随连接配置
+  `servers.db`**（即父类 `RedisCache` 构造时 `select()` 的那个库）；两者都没有才是 DB 0。
+  这样「不传库名」不会把连接切到与连接配置不一致的库。
 - **显式传入** → 整数库索引，或 `app.redis.DB` 中定义的名称，覆盖默认值。
 
 ```php

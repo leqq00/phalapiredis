@@ -16,7 +16,7 @@ return array(
             'prefix' => 'PhalApi_',         //Redis-key前缀
             'auth'   => 'phalapi',          //Redis链接密码
         ),
-        // Redis分库对应关系；'default' 为未显式传库名时使用的默认库
+        // Redis分库对应关系；'default' 为默认库，未配置则跟随 servers.db（再缺省为 0）
         'DB'       => array(
             'default'    => 0,
             'developers' => 1,
